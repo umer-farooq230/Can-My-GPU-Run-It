@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Set default quantization to 4-bit
-  quantSelect.value = "4bit";
+  quantSelect.value = "q4";
   
   // Update context display
   const contextSlider = document.getElementById('context');
