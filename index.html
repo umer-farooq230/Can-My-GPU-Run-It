@@ -63,6 +63,32 @@
       margin-bottom: 48px;
       padding-bottom: 32px;
       border-bottom: 2px solid var(--accent);
+      position: relative;
+    }
+
+    .nav {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    .nav a {
+      color: #ffff;
+      background: #d11515;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+      transition: color 1.0s ease;
+      padding: 8px 16px;
+      border: 2px solid var(--accent);
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .nav a:hover {
+      transition: color 1.0s ease;      
+      background:#000;
+      
     }
 
     h1 {
@@ -200,8 +226,8 @@
     }
 
     button:hover {
-      background: #262626;
-      transform: translateY(-1px);
+      background: #d11515;
+      transform: translateY(-2px);
       box-shadow: var(--shadow-lg);
     }
 
@@ -414,157 +440,6 @@
       border-top: 2px solid var(--border-color);
     }
 
-    .feedback-section {
-      background: var(--bg-secondary);
-      padding: 40px;
-      border-radius: 12px;
-      margin-bottom: 40px;
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .feedback-section h3 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      text-transform: none;
-      letter-spacing: -0.01em;
-      color: var(--text-primary);
-    }
-
-    .feedback-description {
-      color: var(--text-secondary);
-      font-size: 15px;
-      margin-bottom: 24px;
-      line-height: 1.6;
-    }
-
-    .feedback-form {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .feedback-options {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .feedback-option {
-      flex: 1;
-      min-width: 150px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 18px;
-      background: var(--bg-primary);
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .feedback-option:hover {
-      border-color: var(--accent);
-      background: #fafafa;
-    }
-
-    .feedback-option input[type="radio"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-      margin: 0;
-    }
-
-    .feedback-option:has(input:checked) {
-      border-color: var(--accent);
-      background: #fafafa;
-      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
-    }
-
-    .feedback-input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .feedback-email {
-      width: 100%;
-      padding: 12px 14px;
-      font-size: 15px;
-      font-family: inherit;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      transition: all 0.2s ease;
-    }
-
-    .feedback-email:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
-    }
-
-    .feedback-textarea {
-      width: 100%;
-      padding: 12px 14px;
-      font-size: 15px;
-      font-family: inherit;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      resize: vertical;
-      min-height: 80px;
-      transition: all 0.2s ease;
-    }
-
-    .feedback-textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
-    }
-
-    .feedback-submit {
-      background: var(--accent);
-      color: #ffffff;
-      border: none;
-      padding: 14px 28px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      box-shadow: var(--shadow-md);
-      width: auto;
-      align-self: flex-start;
-    }
-
-    .feedback-submit:hover {
-      background: #262626;
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .feedback-submit:active {
-      transform: translateY(0);
-    }
-
-    .feedback-success {
-      padding: 16px 20px;
-      background: var(--safe-bg);
-      border: 2px solid var(--safe-border);
-      border-radius: 8px;
-      color: var(--safe-text);
-      font-weight: 600;
-      text-align: center;
-      animation: fadeIn 0.3s ease;
-    }
-
     .footer-bottom {
       text-align: center;
       padding: 24px 0;
@@ -599,22 +474,6 @@
         flex-direction: column;
         gap: 8px;
       }
-
-      .feedback-section {
-        padding: 24px;
-      }
-
-      .feedback-options {
-        flex-direction: column;
-      }
-
-      .feedback-option {
-        min-width: 100%;
-      }
-
-      .feedback-submit {
-        width: 100%;
-      }
     }
   </style>
 </head>
@@ -622,6 +481,9 @@
 <body>
   <div class="container">
     <header>
+      <nav class="nav">
+        <a href="contact.html">Contact</a>
+      </nav>
       <h1>Can My GPU Run This AI Model?</h1>
       <p class="subtitle">
         Instantly check if your GPU and RAM can run popular AI models locally. 
@@ -693,42 +555,13 @@
     </main>
 
     <footer>
-      <div class="feedback-section">
-        <h3>Would you use this as a product?</h3>
-        <p class="feedback-description">Help us improve! Let us know if you'd find a premium version useful with features like offline mode, custom models, and API access.</p>
-        
-        <form id="feedbackForm" class="feedback-form">
-          <div class="feedback-options">
-            <label class="feedback-option">
-              <input type="radio" name="interest" value="definitely" required>
-              <span>Definitely would use</span>
-            </label>
-            <label class="feedback-option">
-              <input type="radio" name="interest" value="maybe" required>
-              <span>Maybe interested</span>
-            </label>
-            <label class="feedback-option">
-              <input type="radio" name="interest" value="no" required>
-              <span>Not interested</span>
-            </label>
-          </div>
-          
-          <div class="feedback-input-group">
-            <input type="email" name="email" id="emailInput" placeholder="Your email (optional)" class="feedback-email">
-            <textarea name="feedback" id="feedbackText" placeholder="Any suggestions or features you'd like to see? (optional)" class="feedback-textarea" rows="3"></textarea>
-          </div>
-          
-          <button type="submit" class="feedback-submit">Submit Feedback</button>
-        </form>
-        
-        <div id="feedbackSuccess" class="feedback-success" style="display: none;">
-          ✓ Thank you for your feedback!
-        </div>
-      </div>
-
       <div class="footer-bottom">
         <p class="copyright">© 2026 GPU Model Checker. All rights reserved.</p>
         <p class="disclaimer">This tool provides estimates only. Actual performance may vary based on system configuration, drivers, and other factors.</p>
+        <p style="margin-top: 16px;">
+          <a href="contact.html" style="color: var(--accent); text-decoration: none; font-weight: 600;">Contact Us</a> · 
+          <a href="mailto:umerfarooq230@gmail.com" style="color: var(--accent); text-decoration: none; font-weight: 600;">Email</a>
+        </p>
       </div>
     </footer>
   </div>
@@ -736,43 +569,6 @@
   <script src="gpus.js"></script>
   <script src="models.js"></script>
   <script src="logic.js"></script>
-
-  <script>
-    // Formspree Form Handler - Safe for public GitHub Pages
-    document.getElementById('feedbackForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const formData = new FormData(e.target);
-      
-      // Disable submit button
-      const submitBtn = e.target.querySelector('.feedback-submit');
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Submitting...';
-      submitBtn.disabled = true;
-      
-      // Send to Formspree
-      fetch('https://formspree.io/f/xpqjdyer', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json'
-        }
-      })
-      .then(response => {
-        if (response.ok) {
-          document.getElementById('feedbackForm').style.display = 'none';
-          document.getElementById('feedbackSuccess').style.display = 'block';
-        } else {
-          throw new Error('Form submission failed');
-        }
-      })
-      .catch(error => {
-        alert('Error submitting feedback. Please try again.');
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-      });
-    });
-  </script>
 
 </body>
 </html>
