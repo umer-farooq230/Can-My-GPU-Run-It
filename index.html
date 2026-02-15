@@ -714,8 +714,8 @@
           </div>
           
           <div class="feedback-input-group">
-            <input type="email" id="emailInput" placeholder="Your email (optional)" class="feedback-email">
-            <textarea id="feedbackText" placeholder="Any suggestions or features you'd like to see? (optional)" class="feedback-textarea" rows="3"></textarea>
+            <input type="email" name="email" id="emailInput" placeholder="Your email (optional)" class="feedback-email">
+            <textarea name="feedback" id="feedbackText" placeholder="Any suggestions or features you'd like to see? (optional)" class="feedback-textarea" rows="3"></textarea>
           </div>
           
           <button type="submit" class="feedback-submit">Submit Feedback</button>
@@ -736,6 +736,43 @@
   <script src="gpus.js"></script>
   <script src="models.js"></script>
   <script src="logic.js"></script>
+
+  <script>
+    // Formspree Form Handler - Safe for public GitHub Pages
+    document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      
+      // Disable submit button
+      const submitBtn = e.target.querySelector('.feedback-submit');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Submitting...';
+      submitBtn.disabled = true;
+      
+      // Send to Formspree
+      fetch('https://formspree.io/f/xpqjdyer', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          document.getElementById('feedbackForm').style.display = 'none';
+          document.getElementById('feedbackSuccess').style.display = 'block';
+        } else {
+          throw new Error('Form submission failed');
+        }
+      })
+      .catch(error => {
+        alert('Error submitting feedback. Please try again.');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      });
+    });
+  </script>
 
 </body>
 </html>
