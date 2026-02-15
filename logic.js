@@ -223,4 +223,35 @@ document.addEventListener('DOMContentLoaded', () => {
   contextSlider.addEventListener('input', (e) => {
     contextDisplay.textContent = e.target.value;
   });
+
+  // Handle feedback form submission
+  const feedbackForm = document.getElementById('feedbackForm');
+  feedbackForm.addEventListener('submit', handleFeedbackSubmit);
 });
+
+function handleFeedbackSubmit(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const interest = formData.get('interest');
+  const email = document.getElementById('emailInput').value;
+  const feedback = document.getElementById('feedbackText').value;
+  
+  // Log feedback data (in production, this would send to a server)
+  console.log('Feedback submitted:', {
+    interest,
+    email: email || 'Not provided',
+    feedback: feedback || 'No additional feedback'
+  });
+  
+  // Show success message
+  document.getElementById('feedbackForm').style.display = 'none';
+  document.getElementById('feedbackSuccess').style.display = 'block';
+  
+  // In production, you would send this data to your backend:
+  // fetch('/api/feedback', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ interest, email, feedback })
+  // });
+}
