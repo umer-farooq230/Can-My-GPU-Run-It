@@ -1,257 +1,778 @@
-function calculateMemory(model, context, quant, gpuVram, systemRam) {
-  const bytesPerParam = QUANT_TABLE[quant].bytesPerParam;
-  const weights = model.params * bytesPerParam;
-  
-  // KV cache: 2 (key+value) × layers × hidden × context × 2 bytes (FP16)
-  const kvCache = 2 * model.layers * model.hidden * context * 2;
-  
-  // Overhead: at least 0.5GB or 8% of total
-  const overhead = Math.max(0.5 * (1024 ** 3), 0.08 * (weights + kvCache));
-  
-  const totalGpuRequired = weights + kvCache + overhead;
-  
-  // Convert to GB
-  const weightsGB = weights / (1024 ** 3);
-  const kvCacheGB = kvCache / (1024 ** 3);
-  const overheadGB = overhead / (1024 ** 3);
-  const totalGB = totalGpuRequired / (1024 ** 3);
-  
-  return {
-    weightsGB,
-    kvCacheGB,
-    overheadGB,
-    totalGB
-  };
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-function calculateMaxContext(model, quant, gpuVram) {
-  const bytesPerParam = QUANT_TABLE[quant].bytesPerParam;
-  const weights = model.params * bytesPerParam;
-  const overhead = Math.max(0.5 * (1024 ** 3), 0.08 * weights);
-  
-  // Available VRAM for KV cache
-  const availableForKV = (gpuVram * (1024 ** 3)) - weights - overhead;
-  
-  if (availableForKV <= 0) return 0;
-  
-  // Solve for context: kv = 2 × layers × hidden × context × 2
-  const kvPerToken = 2 * model.layers * model.hidden * 2;
-  const maxContext = Math.floor(availableForKV / kvPerToken);
-  
-  return Math.max(0, maxContext);
-}
+  <title>Can My GPU Run This AI Model? | Free LLM VRAM Calculator</title>
 
-function classify(memory, gpuVram, systemRam) {
-  const totalGB = memory.totalGB;
-  const gpuVramGB = gpuVram;
-  const systemRamGB = systemRam;
-  
-  if (totalGB <= gpuVramGB * 0.85) {
-    return {
-      status: "SAFE",
-      description: "Runs entirely on GPU"
-    };
-  } else if (totalGB <= gpuVramGB) {
-    return {
-      status: "TIGHT",
-      description: "Uses full GPU VRAM"
-    };
-  } else if (totalGB <= gpuVramGB + systemRamGB) {
-    return {
-      status: "TIGHT",
-      description: "Requires RAM offload"
-    };
-  } else {
-    return {
-      status: "NO",
-      description: "Cannot run"
-    };
-  }
-}
+  <meta name="description" content="Instantly check if your GPU and RAM can run popular AI models like Llama 3, Mistral, Mixtral, and 70B locally. Accurate VRAM, KV cache, and memory compatibility calculator for local LLM inference.">
+  <meta name="robots" content="index, follow">
 
-function checkCompatibility() {
-  const selectedGPU = document.getElementById("gpuSelect").value;
-  const context = parseInt(document.getElementById("context").value);
-  const quant = document.getElementById("quantSelect").value;
-  const systemRam = parseInt(document.getElementById("ramInput").value);
-  
-  if (!selectedGPU) {
-    alert("Please select a GPU");
-    return;
-  }
-  
-  if (!systemRam || systemRam <= 0) {
-    alert("Please enter your system RAM");
-    return;
-  }
-  
-  const gpuVram = GPUS[selectedGPU].vram;
-  
-  const results = MODELS.map(model => {
-    const memory = calculateMemory(model, context, quant, gpuVram, systemRam);
-    const classification = classify(memory, gpuVram, systemRam);
-    const maxContext = calculateMaxContext(model, quant, gpuVram);
-    
-    // Calculate headroom percentage
-    const gpuUsagePercent = (memory.totalGB / gpuVram) * 100;
-    const headroomPercent = Math.max(0, 100 - gpuUsagePercent);
-    
-    return {
-      name: model.name,
-      memory: memory,
-      status: classification.status,
-      description: classification.description,
-      headroomPercent: headroomPercent,
-      gpuUsagePercent: gpuUsagePercent,
-      maxContext: maxContext
-    };
-  });
-  
-  // Sort by total memory required (ascending)
-  results.sort((a, b) => a.memory.totalGB - b.memory.totalGB);
-  
-  renderResults(results, gpuVram, systemRam, quant);
-}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-function renderResults(results, gpuVram, systemRam, quant) {
-  const container = document.getElementById("results");
-  
-  const safe = results.filter(r => r.status === "SAFE");
-  const tight = results.filter(r => r.status === "TIGHT");
-  const no = results.filter(r => r.status === "NO");
-  
-  const quantLabel = QUANT_TABLE[quant].label;
-  
-  let html = `
-    <div class="summary">
-      <div>GPU VRAM: ${gpuVram} GB | System RAM: ${systemRam} GB | Quantization: ${quantLabel}</div>
-    </div>
-  `;
-  
-  if (safe.length > 0) {
-    html += `<div class="section">
-      <h3 class="safe-label">✓ SAFE (${safe.length})</h3>
-      ${safe.map(r => renderModel(r)).join('')}
-    </div>`;
-  }
-  
-  if (tight.length > 0) {
-    html += `<div class="section">
-      <h3 class="tight-label">⚠ TIGHT (${tight.length})</h3>
-      ${tight.map(r => renderModel(r)).join('')}
-    </div>`;
-  }
-  
-  if (no.length > 0) {
-    html += `<div class="section">
-      <h3 class="no-label">✗ WON'T RUN (${no.length})</h3>
-      ${no.map(r => renderModel(r)).join('')}
-    </div>`;
-  }
-  
-  container.innerHTML = html;
-  container.style.display = 'block';
-}
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-function renderModel(result) {
-  const detailsId = `details-${result.name.replace(/\s+/g, '-')}`;
-  
-  return `
-    <div class="model-result ${result.status.toLowerCase()}">
-      <div class="model-header">
-        <div class="model-name">${result.name}</div>
-        <div class="model-stats">
-          <span><strong>Required:</strong> ${result.memory.totalGB.toFixed(2)} GB</span>
-          <span><strong>GPU Usage:</strong> ${result.gpuUsagePercent.toFixed(1)}%</span>
-          <span><strong>Headroom:</strong> ${result.headroomPercent.toFixed(1)}%</span>
+    :root {
+      --bg-primary: #fafafa;
+      --bg-secondary: #ffffff;
+      --text-primary: #0a0a0a;
+      --text-secondary: #525252;
+      --border-color: #e5e5e5;
+      --accent: #0a0a0a;
+      
+      --safe-bg: #f0fdf4;
+      --safe-border: #16a34a;
+      --safe-text: #15803d;
+      
+      --tight-bg: #fffbeb;
+      --tight-border: #f59e0b;
+      --tight-text: #d97706;
+      
+      --no-bg: #fef2f2;
+      --no-border: #dc2626;
+      --no-text: #b91c1c;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 20px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    h1 {
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 17px;
+      max-width: 680px;
+      line-height: 1.6;
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 48px 0 20px 0;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 24px;
+      background: var(--bg-secondary);
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    .input-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
+    }
+
+    select:hover, input[type="number"]:hover {
+      border-color: #a3a3a3;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      cursor: pointer;
+      border-radius: 50%;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      cursor: pointer;
+      border-radius: 50%;
+      border: none;
+      box-shadow: var(--shadow-md);
+    }
+
+    .context-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    button {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 16px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-md);
+      letter-spacing: 0.01em;
+    }
+
+    button:hover {
+      background: #262626;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #results {
+      display: none;
+      margin-top: 48px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .summary {
+      background: var(--bg-secondary);
+      padding: 20px 24px;
+      border-radius: 10px;
+      margin-bottom: 32px;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .safe-label {
+      color: var(--safe-text);
+      background: var(--safe-bg);
+      padding: 12px 20px;
+      border-radius: 8px;
+      border-left: 4px solid var(--safe-border);
+    }
+
+    .tight-label {
+      color: var(--tight-text);
+      background: var(--tight-bg);
+      padding: 12px 20px;
+      border-radius: 8px;
+      border-left: 4px solid var(--tight-border);
+    }
+
+    .no-label {
+      color: var(--no-text);
+      background: var(--no-bg);
+      padding: 12px 20px;
+      border-radius: 8px;
+      border-left: 4px solid var(--no-border);
+    }
+
+    .model-result {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
+      border: 2px solid var(--border-color);
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .model-result:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .model-result.safe {
+      border-color: var(--safe-border);
+      background: var(--safe-bg);
+    }
+
+    .model-result.tight {
+      border-color: var(--tight-border);
+      background: var(--tight-bg);
+    }
+
+    .model-result.no {
+      border-color: var(--no-border);
+      background: var(--no-bg);
+    }
+
+    .model-header {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .model-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .model-stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .model-stats span {
+      color: var(--text-secondary);
+    }
+
+    .model-stats strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .model-meta {
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .technical-toggle {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .details-btn {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      width: auto;
+      border-radius: 6px;
+      box-shadow: none;
+    }
+
+    .details-btn:hover {
+      background: var(--bg-primary);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .technical-details {
+      margin-top: 12px;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .detail-row {
+      padding: 6px 0;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+    }
+
+    .detail-row strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .note {
+      margin-top: 48px;
+      padding: 24px;
+      background: var(--bg-secondary);
+      font-size: 14px;
+      border-radius: 10px;
+      border-left: 4px solid var(--accent);
+      line-height: 1.7;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .note strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .status-legend {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .seo-section {
+      margin-top: 48px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .seo-section p {
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    /* Footer Styles */
+    footer {
+      margin-top: 80px;
+      padding-top: 48px;
+      border-top: 2px solid var(--border-color);
+    }
+
+    .feedback-section {
+      background: var(--bg-secondary);
+      padding: 40px;
+      border-radius: 12px;
+      margin-bottom: 40px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .feedback-section h3 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-transform: none;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .feedback-description {
+      color: var(--text-secondary);
+      font-size: 15px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .feedback-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .feedback-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .feedback-option {
+      flex: 1;
+      min-width: 150px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      background: var(--bg-primary);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .feedback-option:hover {
+      border-color: var(--accent);
+      background: #fafafa;
+    }
+
+    .feedback-option input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .feedback-option:has(input:checked) {
+      border-color: var(--accent);
+      background: #fafafa;
+      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
+    }
+
+    .feedback-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feedback-email {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    .feedback-email:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
+    }
+
+    .feedback-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      resize: vertical;
+      min-height: 80px;
+      transition: all 0.2s ease;
+    }
+
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
+    }
+
+    .feedback-submit {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-md);
+      width: auto;
+      align-self: flex-start;
+    }
+
+    .feedback-submit:hover {
+      background: #262626;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feedback-submit:active {
+      transform: translateY(0);
+    }
+
+    .feedback-success {
+      padding: 16px 20px;
+      background: var(--safe-bg);
+      border: 2px solid var(--safe-border);
+      border-radius: 8px;
+      color: var(--safe-text);
+      font-weight: 600;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding: 24px 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .copyright {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .disclaimer {
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 32px;
+      }
+
+      .input-grid {
+        grid-template-columns: 1fr;
+        padding: 24px;
+      }
+
+      .model-stats {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .feedback-section {
+        padding: 24px;
+      }
+
+      .feedback-options {
+        flex-direction: column;
+      }
+
+      .feedback-option {
+        min-width: 100%;
+      }
+
+      .feedback-submit {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>Can My GPU Run This AI Model?</h1>
+      <p class="subtitle">
+        Instantly check if your GPU and RAM can run popular AI models locally. 
+        Includes VRAM usage, KV cache estimation, and quantization-aware memory calculations.
+      </p>
+    </header>
+
+    <main>
+
+      <div class="input-grid">
+        <div class="input-section">
+          <label for="gpuSelect">Select Your GPU</label>
+          <select id="gpuSelect">
+            <option value="">-- Choose a GPU --</option>
+          </select>
         </div>
-        <div class="model-meta">
-          <span>${result.description}</span>
-          ${result.maxContext > 0 ? `<span>Max context: ~${result.maxContext.toLocaleString()} tokens</span>` : '<span>Exceeds GPU capacity at base weights</span>'}
+
+        <div class="input-section">
+          <label for="ramInput">System RAM (GB)</label>
+          <input type="number" id="ramInput" min="4" max="256" step="4" value="16">
+        </div>
+
+        <div class="input-section">
+          <label for="quantSelect">Quantization</label>
+          <select id="quantSelect"></select>
+        </div>
+
+        <div class="input-section">
+          <label for="context">Context Length: <span class="context-value" id="contextDisplay">2048</span> tokens</label>
+          <input type="range" id="context" min="512" max="8192" step="512" value="2048">
         </div>
       </div>
-      <div class="technical-toggle">
-        <button onclick="toggleDetails('${detailsId}')" class="details-btn">Show Technical Details</button>
-        <div id="${detailsId}" class="technical-details" style="display: none;">
-          <div class="detail-row"><strong>Weights:</strong> ${result.memory.weightsGB.toFixed(2)} GB</div>
-          <div class="detail-row"><strong>KV Cache:</strong> ${result.memory.kvCacheGB.toFixed(2)} GB</div>
-          <div class="detail-row"><strong>Overhead:</strong> ${result.memory.overheadGB.toFixed(2)} GB</div>
-          <div class="detail-row"><strong>Total Required:</strong> ${result.memory.totalGB.toFixed(2)} GB</div>
+
+      <button onclick="checkCompatibility()">Check Compatibility</button>
+
+      <div id="results"></div>
+
+      <div class="note">
+        <strong>About the Calculations</strong>
+        Estimates include model weights, KV cache memory (which scales with context length),
+        and runtime overhead.
+        
+        <div class="status-legend">
+          <div>🟢 <strong>SAFE</strong> — Uses ≤85% GPU VRAM</div>
+          <div>🟡 <strong>TIGHT</strong> — Uses up to 100% GPU VRAM or requires RAM offload</div>
+          <div>🔴 <strong>WON'T RUN</strong> — Exceeds available GPU + system RAM</div>
         </div>
       </div>
-    </div>
-  `;
-}
 
-function toggleDetails(id) {
-  const element = document.getElementById(id);
-  const isHidden = element.style.display === 'none';
-  element.style.display = isHidden ? 'block' : 'none';
-  
-  // Update button text
-  const button = element.previousElementSibling;
-  button.textContent = isHidden ? 'Hide Technical Details' : 'Show Technical Details';
-}
+      <section class="seo-section">
+        <h2>How It Works</h2>
+        <p>
+          Running large language models (LLMs) locally requires enough GPU VRAM 
+          to store model weights and key-value (KV) cache memory. The required 
+          memory increases with larger models and longer context lengths.
+        </p>
+        <p>
+          This calculator estimates total GPU memory usage based on model size, 
+          quantization level (4-bit, 8-bit, or FP16), and context length. 
+          It helps determine whether a model runs entirely on GPU, requires system RAM offloading, 
+          or exceeds your hardware limits.
+        </p>
+        <p>
+          Supported models include Llama 3 (8B, 70B), Mistral 7B, Mixtral, 
+          and other popular open-source LLMs used for local inference.
+        </p>
+      </section>
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-  const gpuSelect = document.getElementById('gpuSelect');
-  const quantSelect = document.getElementById('quantSelect');
-  
-  // Populate GPU dropdown
-  Object.keys(GPUS).forEach(gpu => {
-    const option = document.createElement('option');
-    option.value = gpu;
-    option.textContent = gpu;
-    gpuSelect.appendChild(option);
-  });
-  
-  // Populate quantization dropdown
-  Object.keys(QUANT_TABLE).forEach(quant => {
-    const option = document.createElement('option');
-    option.value = quant;
-    option.textContent = QUANT_TABLE[quant].label;
-    quantSelect.appendChild(option);
-  });
-  
-  // Set default quantization to 4-bit
-  quantSelect.value = "q4";
-  
-  // Update context display
-  const contextSlider = document.getElementById('context');
-  const contextDisplay = document.getElementById('contextDisplay');
-  contextSlider.addEventListener('input', (e) => {
-    contextDisplay.textContent = e.target.value;
-  });
+    </main>
 
-  // Handle feedback form submission
-  const feedbackForm = document.getElementById('feedbackForm');
-  feedbackForm.addEventListener('submit', handleFeedbackSubmit);
-});
+    <footer>
+      <div class="feedback-section">
+        <h3>Would you use this as a product?</h3>
+        <p class="feedback-description">Help us improve! Let us know if you'd find a premium version useful with features like offline mode, custom models, and API access.</p>
+        
+        <form id="feedbackForm" class="feedback-form">
+          <div class="feedback-options">
+            <label class="feedback-option">
+              <input type="radio" name="interest" value="definitely" required>
+              <span>Definitely would use</span>
+            </label>
+            <label class="feedback-option">
+              <input type="radio" name="interest" value="maybe" required>
+              <span>Maybe interested</span>
+            </label>
+            <label class="feedback-option">
+              <input type="radio" name="interest" value="no" required>
+              <span>Not interested</span>
+            </label>
+          </div>
+          
+          <div class="feedback-input-group">
+            <input type="email" name="email" id="emailInput" placeholder="Your email (optional)" class="feedback-email">
+            <textarea name="feedback" id="feedbackText" placeholder="Any suggestions or features you'd like to see? (optional)" class="feedback-textarea" rows="3"></textarea>
+          </div>
+          
+          <button type="submit" class="feedback-submit">Submit Feedback</button>
+        </form>
+        
+        <div id="feedbackSuccess" class="feedback-success" style="display: none;">
+          ✓ Thank you for your feedback!
+        </div>
+      </div>
 
-function handleFeedbackSubmit(e) {
-  e.preventDefault();
-  
-  const formData = new FormData(e.target);
-  const interest = formData.get('interest');
-  const email = document.getElementById('emailInput').value;
-  const feedback = document.getElementById('feedbackText').value;
-  
-  // Log feedback data (in production, this would send to a server)
-  console.log('Feedback submitted:', {
-    interest,
-    email: email || 'Not provided',
-    feedback: feedback || 'No additional feedback'
-  });
-  
-  // Show success message
-  document.getElementById('feedbackForm').style.display = 'none';
-  document.getElementById('feedbackSuccess').style.display = 'block';
-  
-  // In production, you would send this data to your backend:
-  // fetch('/api/feedback', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ interest, email, feedback })
-  // });
-}
+      <div class="footer-bottom">
+        <p class="copyright">© 2026 GPU Model Checker. All rights reserved.</p>
+        <p class="disclaimer">This tool provides estimates only. Actual performance may vary based on system configuration, drivers, and other factors.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="gpus.js"></script>
+  <script src="models.js"></script>
+  <script src="logic.js"></script>
+
+  <script>
+    // Formspree Form Handler - Safe for public GitHub Pages
+    document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      
+      // Disable submit button
+      const submitBtn = e.target.querySelector('.feedback-submit');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Submitting...';
+      submitBtn.disabled = true;
+      
+      // Send to Formspree
+      fetch('https://formspree.io/f/xpqjdyer', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          document.getElementById('feedbackForm').style.display = 'none';
+          document.getElementById('feedbackSuccess').style.display = 'block';
+        } else {
+          throw new Error('Form submission failed');
+        }
+      })
+      .catch(error => {
+        alert('Error submitting feedback. Please try again.');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      });
+    });
+  </script>
+
+</body>
+</html>
