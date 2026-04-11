@@ -1,24 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Can My GPU Run This AI Model? | Free LLM VRAM Calculator</title>
-
-  <meta name="description" content="Instantly check if your GPU and RAM can run popular AI models like Llama 3, Mistral, Mixtral, and 70B locally. Accurate VRAM, KV cache, and memory compatibility calculator for local LLM inference.">
+  <meta name="description" content="Instantly check if your GPU and RAM can run popular AI models like Llama 3, Mistral, Mixtral, and 70B locally.">
   <meta name="robots" content="index, follow">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
       --bg-primary: #fafafa;
@@ -27,19 +20,10 @@
       --text-secondary: #525252;
       --border-color: #e5e5e5;
       --accent: #0a0a0a;
-      
-      --safe-bg: #f0fdf4;
-      --safe-border: #16a34a;
-      --safe-text: #15803d;
-      
-      --tight-bg: #fffbeb;
-      --tight-border: #f59e0b;
-      --tight-text: #d97706;
-      
-      --no-bg: #fef2f2;
-      --no-border: #dc2626;
-      --no-text: #b91c1c;
-      
+      --safe-bg: #f0fdf4; --safe-border: #16a34a; --safe-text: #15803d;
+      --tight-bg: #fffbeb; --tight-border: #f59e0b; --tight-text: #d97706;
+      --offload-bg: #eff6ff; --offload-border: #2563eb; --offload-text: #1d4ed8;
+      --no-bg: #fef2f2; --no-border: #dc2626; --no-text: #b91c1c;
       --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
       --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
       --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
@@ -47,528 +31,556 @@
 
     body {
       font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      padding: 20px;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
+      background: var(--bg-primary); color: var(--text-primary);
+      padding: 20px; line-height: 1.6; -webkit-font-smoothing: antialiased;
     }
 
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-    }
+    .container { max-width: 960px; margin: 0 auto; }
 
     header {
-      margin-bottom: 48px;
-      padding-bottom: 32px;
-      border-bottom: 2px solid var(--accent);
-      position: relative;
+      margin-bottom: 48px; padding-bottom: 32px;
+      border-bottom: 2px solid var(--accent); position: relative;
     }
 
-    .nav {
-      position: absolute;
-      top: 0;
-      right: 0;
-    }
-
+    .nav { position: absolute; top: 0; right: 0; }
     .nav a {
-      color: #ffff;
-      background: #d11515;
-      text-decoration: none;
-      font-size: 15px;
-      font-weight: 700;
-      transition: color 1.0s ease;
-      padding: 8px 16px;
-      border: 2px solid var(--accent);
-      border-radius: 6px;
-      display: inline-block;
+      color: #fff; background: #d11515; text-decoration: none;
+      font-size: 15px; font-weight: 700; padding: 8px 16px;
+      border: 2px solid var(--accent); border-radius: 6px; display: inline-block;
+      transition: background 0.2s ease;
     }
+    .nav a:hover { background: #000; }
 
-    .nav a:hover {
-      transition: color 1.0s ease;      
-      background:#000;
-      
+    h1 { font-size: 42px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em; line-height: 1.1; }
+    .subtitle { color: var(--text-secondary); font-size: 17px; max-width: 680px; line-height: 1.6; }
+    h2 { font-size: 24px; font-weight: 700; margin: 48px 0 20px 0; letter-spacing: -0.01em; }
+
+    /* Loading banner */
+    .loading-banner {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 14px 18px; font-size: 14px;
+      color: var(--text-secondary); display: flex; align-items: center;
+      gap: 10px; margin-bottom: 16px;
     }
-
-    h1 {
-      font-size: 42px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid var(--border-color);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .subtitle {
-      color: var(--text-secondary);
-      font-size: 17px;
-      max-width: 680px;
-      line-height: 1.6;
-    }
-
-    h2 {
-      font-size: 24px;
-      font-weight: 700;
-      margin: 48px 0 20px 0;
-      letter-spacing: -0.01em;
-    }
-
-    h3 {
-      font-size: 16px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 16px;
-    }
-
+    /* Input grid */
     .input-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-      margin-bottom: 24px;
-      background: var(--bg-secondary);
-      padding: 32px;
-      border-radius: 12px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border-color);
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 24px; margin-bottom: 16px; background: var(--bg-secondary);
+      padding: 32px; border-radius: 12px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);
     }
+    .input-section { display: flex; flex-direction: column; }
+    .input-section.full-width { grid-column: 1 / -1; }
 
-    .input-section {
-      display: flex;
-      flex-direction: column;
-    }
+    label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 14px; }
 
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 10px;
-      font-size: 14px;
-      color: var(--text-primary);
+    /* GPU picker */
+    .gpu-search-wrap { position: relative; margin-bottom: 8px; }
+    .gpu-search-wrap svg {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;
     }
+    #gpuSearch {
+      width: 100%; padding: 11px 14px 11px 38px; font-size: 14px;
+      font-family: inherit; border: 2px solid var(--border-color);
+      border-radius: 8px; background: var(--bg-primary); color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+    #gpuSearch:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,10,10,0.08); }
+    #gpuSearch::placeholder { color: #a3a3a3; }
+
+    .gpu-search-meta { font-size: 12px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; min-height: 16px; margin-bottom: 6px; }
 
     select, input[type="number"] {
-      width: 100%;
-      padding: 12px 14px;
-      font-size: 15px;
-      font-family: inherit;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      transition: all 0.2s ease;
+      width: 100%; padding: 12px 14px; font-size: 15px; font-family: inherit;
+      border: 2px solid var(--border-color); border-radius: 8px;
+      background: var(--bg-primary); color: var(--text-primary); transition: all 0.2s ease;
     }
-
-    select:focus, input[type="number"]:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
-    }
-
-    select:hover, input[type="number"]:hover {
-      border-color: #a3a3a3;
-    }
+    select:focus, input[type="number"]:focus { outline: none; border-color: var(--accent); }
+    #gpuSelect { height: 160px; }
 
     input[type="range"] {
-      width: 100%;
-      appearance: none;
-      -webkit-appearance: none;
-      height: 6px;
-      background: var(--border-color);
-      border-radius: 3px;
-      cursor: pointer;
-      margin-top: 4px;
+      width: 100%; appearance: none; -webkit-appearance: none;
+      height: 6px; background: var(--border-color); border-radius: 3px; cursor: pointer; margin-top: 4px;
     }
-
     input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      background: var(--accent);
-      cursor: pointer;
-      border-radius: 50%;
-      box-shadow: var(--shadow-md);
-      transition: transform 0.2s ease;
+      -webkit-appearance: none; width: 20px; height: 20px;
+      background: var(--accent); cursor: pointer; border-radius: 50%;
+      box-shadow: var(--shadow-md); transition: transform 0.2s;
     }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 
-    input[type="range"]::-webkit-slider-thumb:hover {
-      transform: scale(1.1);
+    .context-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+    /* Advanced filters toggle button */
+    .adv-filters-toggle-row { margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+
+    #advFiltersBtn {
+      background: var(--bg-secondary); color: var(--text-primary);
+      border: 2px solid var(--border-color); padding: 9px 18px;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+      box-shadow: var(--shadow-sm); width: auto;
     }
+    #advFiltersBtn:hover { border-color: var(--accent); background: var(--bg-primary); transform: none; box-shadow: var(--shadow-sm); }
 
-    input[type="range"]::-moz-range-thumb {
-      width: 20px;
-      height: 20px;
-      background: var(--accent);
-      cursor: pointer;
-      border-radius: 50%;
-      border: none;
-      box-shadow: var(--shadow-md);
+    #clearFiltersBtn {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border-color); padding: 9px 14px;
+      font-size: 13px; font-family: inherit; border-radius: 8px;
+      cursor: pointer; transition: all 0.2s; width: auto; box-shadow: none;
     }
+    #clearFiltersBtn:hover { color: #d11515; border-color: #d11515; background: transparent; transform: none; box-shadow: none; }
 
-    .context-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    button {
-      background: var(--accent);
-      color: #ffffff;
-      border: none;
-      padding: 16px 32px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      border-radius: 10px;
-      transition: all 0.2s ease;
-      box-shadow: var(--shadow-md);
-      letter-spacing: 0.01em;
-    }
-
-    button:hover {
-      background: #d11515;
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    button:active {
-      transform: translateY(0);
-    }
-
-    #results {
+    /* Advanced filters panel */
+    #advFiltersPanel {
       display: none;
-      margin-top: 48px;
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .summary {
-      background: var(--bg-secondary);
-      padding: 20px 24px;
-      border-radius: 10px;
-      margin-bottom: 32px;
-      border: 1px solid var(--border-color);
-      font-size: 14px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-secondary);
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 24px; margin-bottom: 16px;
       box-shadow: var(--shadow-sm);
     }
 
-    .section {
-      margin-bottom: 32px;
-    }
-
-    .safe-label {
-      color: var(--safe-text);
-      background: var(--safe-bg);
-      padding: 12px 20px;
-      border-radius: 8px;
-      border-left: 4px solid var(--safe-border);
-    }
-
-    .tight-label {
-      color: var(--tight-text);
-      background: var(--tight-bg);
-      padding: 12px 20px;
-      border-radius: 8px;
-      border-left: 4px solid var(--tight-border);
-    }
-
-    .no-label {
-      color: var(--no-text);
-      background: var(--no-bg);
-      padding: 12px 20px;
-      border-radius: 8px;
-      border-left: 4px solid var(--no-border);
-    }
-
-    .model-result {
-      background: var(--bg-secondary);
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-bottom: 12px;
-      border: 2px solid var(--border-color);
-      transition: all 0.2s ease;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .model-result:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
-    }
-
-    .model-result.safe {
-      border-color: var(--safe-border);
-      background: var(--safe-bg);
-    }
-
-    .model-result.tight {
-      border-color: var(--tight-border);
-      background: var(--tight-bg);
-    }
-
-    .model-result.no {
-      border-color: var(--no-border);
-      background: var(--no-bg);
-    }
-
-    .model-header {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .model-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .model-stats {
-      display: flex;
+    .af-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 20px;
-      flex-wrap: wrap;
-      font-size: 14px;
-      font-family: 'JetBrains Mono', monospace;
     }
 
-    .model-stats span {
-      color: var(--text-secondary);
+    .af-group { display: flex; flex-direction: column; gap: 8px; }
+    .af-group-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-secondary);
+      padding-bottom: 6px; border-bottom: 1px solid var(--border-color);
     }
 
-    .model-stats strong {
+    /* Checkbox list — scrollable when many items */
+    .af-check-list {
+      display: flex; flex-direction: column; gap: 4px;
+      max-height: 140px; overflow-y: auto;
+      padding-right: 4px;
+    }
+    .af-check-list::-webkit-scrollbar { width: 4px; }
+    .af-check-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+    .af-check-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; cursor: pointer; padding: 2px 0;
       color: var(--text-primary);
-      font-weight: 600;
     }
+    .af-check-label input { cursor: pointer; accent-color: var(--accent); }
+    .af-check-label:hover { color: var(--accent); }
 
-    .model-meta {
-      font-size: 14px;
-      color: var(--text-secondary);
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
+    /* Range filter */
+    .af-range { display: flex; align-items: center; gap: 6px; }
+    .af-range input[type="number"] {
+      padding: 7px 10px; font-size: 13px; border-width: 1px;
+      border-radius: 6px; height: auto;
     }
+    .af-range span { font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
 
-    .technical-toggle {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
+    /* Check button / primary */
+    button.primary-btn {
+      background: var(--accent); color: #fff; border: none;
+      padding: 16px 32px; font-size: 16px; font-weight: 600;
+      cursor: pointer; width: 100%; border-radius: 10px;
+      transition: all 0.2s; box-shadow: var(--shadow-md); letter-spacing: 0.01em;
     }
+    button.primary-btn:hover { background: #d11515; transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    button.primary-btn:active { transform: translateY(0); }
 
+    /* Results */
+    #results { display: none; margin-top: 48px; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .summary-bar {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 20px 24px; margin-bottom: 28px;
+      box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px;
+    }
+    .summary-gpu { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .gpu-name { font-size: 18px; font-weight: 700; }
+    .gpu-vram { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+    .badge { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); text-transform: uppercase; }
+    .summary-config { font-size: 14px; color: var(--text-secondary); }
+    .summary-counts { display: flex; gap: 12px; flex-wrap: wrap; }
+    .count { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; padding: 4px 10px; border-radius: 5px; }
+    .safe-count    { background: var(--safe-bg);    color: var(--safe-text);    }
+    .tight-count   { background: var(--tight-bg);   color: var(--tight-text);   }
+    .offload-count { background: var(--offload-bg); color: var(--offload-text); }
+    .no-count      { background: var(--no-bg);      color: var(--no-text);      }
+
+    .result-section { margin-bottom: 28px; }
+    .section-label {
+      font-size: 14px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; padding: 10px 18px; border-radius: 8px;
+      margin-bottom: 12px; display: block;
+    }
+    .safe-label    { color: var(--safe-text);    background: var(--safe-bg);    border-left: 4px solid var(--safe-border);    }
+    .tight-label   { color: var(--tight-text);   background: var(--tight-bg);   border-left: 4px solid var(--tight-border);   }
+    .offload-label { color: var(--offload-text); background: var(--offload-bg); border-left: 4px solid var(--offload-border); }
+    .no-label      { color: var(--no-text);      background: var(--no-bg);      border-left: 4px solid var(--no-border);      }
+
+    .model-card {
+      background: var(--bg-secondary); border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 10px; border: 2px solid var(--border-color);
+      transition: box-shadow 0.2s, transform 0.2s; box-shadow: var(--shadow-sm);
+    }
+    .model-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .model-card.safe    { border-color: var(--safe-border);    background: var(--safe-bg);    }
+    .model-card.tight   { border-color: var(--tight-border);   background: var(--tight-bg);   }
+    .model-card.offload { border-color: var(--offload-border); background: var(--offload-bg); }
+    .model-card.no      { border-color: var(--no-border);      background: var(--no-bg);      }
+
+    .model-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .model-title  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .model-name   { font-size: 16px; font-weight: 700; }
+    .model-params { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; }
+    .model-family { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+    .model-status-badge { font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 3px 10px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+    .model-status-badge.safe    { background: var(--safe-border);    color: #fff; }
+    .model-status-badge.tight   { background: var(--tight-border);   color: #fff; }
+    .model-status-badge.offload { background: var(--offload-border); color: #fff; }
+    .model-status-badge.no      { background: var(--no-border);      color: #fff; }
+
+    .vram-bar-wrap  { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .vram-bar-track { flex: 1; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+    .vram-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .vram-bar-fill.safe    { background: var(--safe-border);    }
+    .vram-bar-fill.tight   { background: var(--tight-border);   }
+    .vram-bar-fill.offload { background: var(--offload-border); }
+    .vram-bar-fill.no      { background: var(--no-border);      }
+    .vram-bar-label { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); white-space: nowrap; }
+
+    .model-meta-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); }
+    .meta-item strong { color: var(--text-primary); }
+    .meta-desc { font-style: italic; }
+
+    .technical-toggle { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); }
     .details-btn {
-      background: transparent;
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      width: auto;
-      border-radius: 6px;
-      box-shadow: none;
+      background: transparent; color: var(--text-primary); border: 1px solid var(--border-color);
+      padding: 6px 14px; font-size: 12px; font-weight: 500; font-family: inherit;
+      width: auto; border-radius: 6px; box-shadow: none; cursor: pointer; transition: background 0.15s;
     }
-
-    .details-btn:hover {
-      background: var(--bg-primary);
-      transform: none;
-      box-shadow: none;
-    }
-
-    .technical-details {
-      margin-top: 12px;
-      padding: 16px;
-      background: var(--bg-primary);
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-    }
-
-    .detail-row {
-      padding: 6px 0;
-      font-size: 14px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-secondary);
-    }
-
-    .detail-row strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
+    .details-btn:hover { background: var(--bg-primary); transform: none; box-shadow: none; }
+    .technical-details { margin-top: 10px; padding: 14px; background: var(--bg-primary); border-radius: 6px; border: 1px solid var(--border-color); }
+    .detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .detail-item { display: flex; flex-direction: column; gap: 2px; }
+    .detail-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+    .detail-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+    .detail-item.total .detail-value { color: var(--accent); }
 
     .note {
-      margin-top: 48px;
-      padding: 24px;
-      background: var(--bg-secondary);
-      font-size: 14px;
-      border-radius: 10px;
-      border-left: 4px solid var(--accent);
-      line-height: 1.7;
-      box-shadow: var(--shadow-sm);
+      margin-top: 48px; padding: 24px; background: var(--bg-secondary);
+      font-size: 14px; border-radius: 10px; border-left: 4px solid var(--accent);
+      line-height: 1.7; box-shadow: var(--shadow-sm);
     }
+    .note strong { display: block; font-size: 15px; margin-bottom: 12px; }
+    .status-legend { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
 
-    .note strong {
-      display: block;
-      font-size: 15px;
-      margin-bottom: 12px;
-      color: var(--text-primary);
-    }
+    .seo-section { margin-top: 48px; font-size: 15px; color: var(--text-secondary); }
+    .seo-section p { margin-bottom: 16px; line-height: 1.7; }
 
-    .status-legend {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .seo-section {
-      margin-top: 48px;
-      font-size: 15px;
-      color: var(--text-secondary);
-    }
-
-    .seo-section p {
-      margin-bottom: 16px;
-      line-height: 1.7;
-    }
-
-    /* Footer Styles */
-    footer {
-      margin-top: 80px;
-      padding-top: 48px;
-      border-top: 2px solid var(--border-color);
-    }
-
-    .footer-bottom {
-      text-align: center;
-      padding: 24px 0;
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
-
-    .copyright {
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-    }
-
-    .disclaimer {
-      font-size: 13px;
-      line-height: 1.6;
-      max-width: 600px;
-      margin: 0 auto;
-    }
+    footer { margin-top: 80px; padding-top: 48px; border-top: 2px solid var(--border-color); }
+    .footer-bottom { text-align: center; padding: 24px 0; color: var(--text-secondary); font-size: 14px; }
+    .copyright { font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .disclaimer { font-size: 13px; line-height: 1.6; max-width: 600px; margin: 0 auto; }
 
     @media (max-width: 768px) {
-      h1 {
-        font-size: 32px;
-      }
-
-      .input-grid {
-        grid-template-columns: 1fr;
-        padding: 24px;
-      }
-
-      .model-stats {
-        flex-direction: column;
-        gap: 8px;
-      }
+      h1 { font-size: 32px; }
+      .input-grid { grid-template-columns: 1fr; padding: 24px; }
+      .af-grid { grid-template-columns: 1fr 1fr; }
+      .detail-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <header>
-      <nav class="nav">
-        <a href="contact.html">Contact</a>
-      </nav>
-      <h1>Can My GPU Run This AI Model?</h1>
-      <p class="subtitle">
-        Instantly check if your GPU and RAM can run popular AI models locally. 
-        Includes VRAM usage, KV cache estimation, and quantization-aware memory calculations.
+<div class="container">
+  <header>
+    <nav class="nav"><a href="contact.html">Contact</a></nav>
+    <h1>Can My GPU Run This AI Model?</h1>
+    <p class="subtitle">Instantly check if your GPU and RAM can run popular AI models locally. Includes VRAM usage, KV cache estimation, and quantization-aware memory calculations.</p>
+  </header>
+
+  <main>
+    <div id="gpuLoadingBanner" class="loading-banner">
+      <div class="spinner"></div>
+      Loading GPU database…
+    </div>
+
+    <div class="input-grid">
+
+      <!-- GPU picker -->
+      <div class="input-section full-width">
+        <label>Select Your GPU</label>
+        <div class="gpu-search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="gpuSearch" placeholder="Search GPU — e.g. 1080 ti, RX 6800, 24 GB, GDDR6…" autocomplete="off">
+        </div>
+        <div id="gpuSearchMeta" class="gpu-search-meta"></div>
+        <select id="gpuSelect" size="6"></select>
+      </div>
+
+      <div class="input-section">
+        <label for="ramInput">System RAM (GB)</label>
+        <input type="number" id="ramInput" min="4" max="256" step="4" value="16">
+      </div>
+
+      <div class="input-section">
+        <label for="quantSelect">Quantization</label>
+        <select id="quantSelect"></select>
+      </div>
+
+      <div class="input-section">
+        <label for="context">Context Length: <span class="context-value" id="contextDisplay">2,048</span> tokens</label>
+        <input type="range" id="context" min="512" max="128000" step="512" value="2048">
+      </div>
+
+      <div class="input-section">
+        <label for="familyFilter">Model Family</label>
+        <select id="familyFilter"></select>
+      </div>
+
+    </div>
+
+    <!-- Advanced Filters toggle -->
+    <div class="adv-filters-toggle-row">
+      <button id="advFiltersBtn" onclick="toggleAdvancedFilters()">▸ Advanced Filters</button>
+      <button id="clearFiltersBtn" onclick="clearAdvancedFilters()">✕ Clear filters</button>
+    </div>
+
+    <!-- Advanced Filters Panel -->
+    <div id="advFiltersPanel">
+      <div class="af-grid">
+
+        <!-- VRAM (memory size) -->
+        <div class="af-group">
+          <div class="af-group-label">VRAM Size</div>
+          <div class="af-check-list" id="af-memSize"></div>
+        </div>
+
+        <!-- Memory Type -->
+        <div class="af-group">
+          <div class="af-group-label">Memory Type</div>
+          <div class="af-check-list" id="af-memType"></div>
+        </div>
+
+        <!-- Memory Bus -->
+        <div class="af-group">
+          <div class="af-group-label">Memory Bus</div>
+          <div class="af-check-list" id="af-memBus"></div>
+        </div>
+
+        <!-- Slot -->
+        <div class="af-group">
+          <div class="af-group-label">Slot</div>
+          <div class="af-check-list" id="af-slot"></div>
+        </div>
+
+        <!-- Release Year -->
+        <div class="af-group">
+          <div class="af-group-label">Release Year</div>
+          <div class="af-check-list" id="af-year"></div>
+        </div>
+
+        <!-- Base Clock -->
+        <div class="af-group">
+          <div class="af-group-label">Base Clock (MHz)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('baseClock','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('baseClock','max',this.value)">
+          </div>
+        </div>
+
+        <!-- Boost Clock -->
+        <div class="af-group">
+          <div class="af-group-label">Boost Clock (MHz)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('boostClock','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('boostClock','max',this.value)">
+          </div>
+        </div>
+
+        <!-- Memory Clock -->
+        <div class="af-group">
+          <div class="af-group-label">Memory Clock (MHz)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('memoryClock','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('memoryClock','max',this.value)">
+          </div>
+        </div>
+
+        <!-- Memory Bandwidth -->
+        <div class="af-group">
+          <div class="af-group-label">Mem. Bandwidth (GB/s)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('memoryBandwidth','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('memoryBandwidth','max',this.value)">
+          </div>
+        </div>
+
+        <!-- FP32 -->
+        <div class="af-group">
+          <div class="af-group-label">FP32 (TFLOPS)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('fp32','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('fp32','max',this.value)">
+          </div>
+        </div>
+
+        <!-- FP16 -->
+        <div class="af-group">
+          <div class="af-group-label">FP16 (TFLOPS)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('fp16','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('fp16','max',this.value)">
+          </div>
+        </div>
+
+        <!-- FP64 -->
+        <div class="af-group">
+          <div class="af-group-label">FP64 (TFLOPS)</div>
+          <div class="af-range">
+            <input type="number" step="0.01" placeholder="Min" oninput="setRangeFilter('fp64','min',this.value)">
+            <span>–</span>
+            <input type="number" step="0.01" placeholder="Max" oninput="setRangeFilter('fp64','max',this.value)">
+          </div>
+        </div>
+
+        <!-- Pixel Rate -->
+        <div class="af-group">
+          <div class="af-group-label">Pixel Rate (GP/s)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('pixelRate','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('pixelRate','max',this.value)">
+          </div>
+        </div>
+
+        <!-- Texture Rate -->
+        <div class="af-group">
+          <div class="af-group-label">Texture Rate (GT/s)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('textureRate','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('textureRate','max',this.value)">
+          </div>
+        </div>
+
+        <!-- TMUs -->
+        <div class="af-group">
+          <div class="af-group-label">TMUs</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('tmus','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('tmus','max',this.value)">
+          </div>
+        </div>
+
+        <!-- ROPs -->
+        <div class="af-group">
+          <div class="af-group-label">ROPs</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('rops','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('rops','max',this.value)">
+          </div>
+        </div>
+
+        <!-- RT Cores -->
+        <div class="af-group">
+          <div class="af-group-label">RT Cores</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('rtCores','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('rtCores','max',this.value)">
+          </div>
+        </div>
+
+        <!-- L1 Cache -->
+        <div class="af-group">
+          <div class="af-group-label">L1 Cache (KB)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('l1Cache','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('l1Cache','max',this.value)">
+          </div>
+        </div>
+
+        <!-- L2 Cache -->
+        <div class="af-group">
+          <div class="af-group-label">L2 Cache (MB)</div>
+          <div class="af-range">
+            <input type="number" placeholder="Min" oninput="setRangeFilter('l2Cache','min',this.value)">
+            <span>–</span>
+            <input type="number" placeholder="Max" oninput="setRangeFilter('l2Cache','max',this.value)">
+          </div>
+        </div>
+
+      </div><!-- /.af-grid -->
+    </div><!-- /#advFiltersPanel -->
+
+    <button class="primary-btn" onclick="checkCompatibility()">Check Compatibility</button>
+
+    <div id="results"></div>
+
+    <div class="note">
+      <strong>About the Calculations</strong>
+      Estimates include model weights, KV cache memory (which scales with context length), and runtime overhead.
+      <div class="status-legend">
+        <div>🟢 <strong>SAFE</strong> — Uses ≤85% GPU VRAM</div>
+        <div>🟡 <strong>TIGHT</strong> — Fits in GPU VRAM (tight, up to 100%)</div>
+        <div>🔵 <strong>OFFLOAD</strong> — Requires CPU/RAM offloading (slower)</div>
+        <div>🔴 <strong>WON'T RUN</strong> — Exceeds GPU + system RAM</div>
+      </div>
+    </div>
+
+    <section class="seo-section">
+      <h2>How It Works</h2>
+      <p>Running large language models (LLMs) locally requires enough GPU VRAM to store model weights and key-value (KV) cache memory. The required memory increases with larger models and longer context lengths.</p>
+      <p>This calculator estimates total GPU memory usage based on model size, quantization level (4-bit, 8-bit, or FP16), and context length. It helps determine whether a model runs entirely on GPU, requires system RAM offloading, or exceeds your hardware limits.</p>
+      <p>Supported models include Llama 3 (8B, 70B), Mistral 7B, Mixtral, and other popular open-source LLMs used for local inference.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-bottom">
+      <p class="copyright">© 2026 GPU Model Checker. All rights reserved.</p>
+      <p class="disclaimer">This tool provides estimates only. Actual performance may vary based on system configuration, drivers, and other factors.</p>
+      <p style="margin-top:16px;">
+        <a href="contact.html" style="color:var(--accent);text-decoration:none;font-weight:600;">Contact Us</a> ·
+        <a href="mailto:umerfarooq230@gmail.com" style="color:var(--accent);text-decoration:none;font-weight:600;">Email</a>
       </p>
-    </header>
+    </div>
+  </footer>
+</div>
 
-    <main>
-
-      <div class="input-grid">
-        <div class="input-section">
-          <label for="gpuSelect">Select Your GPU</label>
-          <select id="gpuSelect">
-            <option value="">-- Choose a GPU --</option>
-          </select>
-        </div>
-
-        <div class="input-section">
-          <label for="ramInput">System RAM (GB)</label>
-          <input type="number" id="ramInput" min="4" max="256" step="4" value="16">
-        </div>
-
-        <div class="input-section">
-          <label for="quantSelect">Quantization</label>
-          <select id="quantSelect"></select>
-        </div>
-
-        <div class="input-section">
-          <label for="context">Context Length: <span class="context-value" id="contextDisplay">2048</span> tokens</label>
-          <input type="range" id="context" min="512" max="8192" step="512" value="2048">
-        </div>
-      </div>
-
-      <button onclick="checkCompatibility()">Check Compatibility</button>
-
-      <div id="results"></div>
-
-      <div class="note">
-        <strong>About the Calculations</strong>
-        Estimates include model weights, KV cache memory (which scales with context length),
-        and runtime overhead.
-        
-        <div class="status-legend">
-          <div>🟢 <strong>SAFE</strong> — Uses ≤85% GPU VRAM</div>
-          <div>🟡 <strong>TIGHT</strong> — Uses up to 100% GPU VRAM or requires RAM offload</div>
-          <div>🔴 <strong>WON'T RUN</strong> — Exceeds available GPU + system RAM</div>
-        </div>
-      </div>
-
-      <section class="seo-section">
-        <h2>How It Works</h2>
-        <p>
-          Running large language models (LLMs) locally requires enough GPU VRAM 
-          to store model weights and key-value (KV) cache memory. The required 
-          memory increases with larger models and longer context lengths.
-        </p>
-        <p>
-          This calculator estimates total GPU memory usage based on model size, 
-          quantization level (4-bit, 8-bit, or FP16), and context length. 
-          It helps determine whether a model runs entirely on GPU, requires system RAM offloading, 
-          or exceeds your hardware limits.
-        </p>
-        <p>
-          Supported models include Llama 3 (8B, 70B), Mistral 7B, Mixtral, 
-          and other popular open-source LLMs used for local inference.
-        </p>
-      </section>
-
-    </main>
-
-    <footer>
-      <div class="footer-bottom">
-        <p class="copyright">© 2026 GPU Model Checker. All rights reserved.</p>
-        <p class="disclaimer">This tool provides estimates only. Actual performance may vary based on system configuration, drivers, and other factors.</p>
-        <p style="margin-top: 16px;">
-          <a href="contact.html" style="color: var(--accent); text-decoration: none; font-weight: 600;">Contact Us</a> · 
-          <a href="mailto:umerfarooq230@gmail.com" style="color: var(--accent); text-decoration: none; font-weight: 600;">Email</a>
-        </p>
-      </div>
-    </footer>
-  </div>
-
-  <script src="gpus.js"></script>
-  <script src="models.js"></script>
-  <script src="logic.js"></script>
-
+<script src="logic.js"></script>
+<script>
+  fetch("all-gpus.json")
+    .then(r => r.json())
+    .then(data => loadGPUData(data))
+    .catch(err => {
+      const b = document.getElementById("gpuLoadingBanner");
+      b.innerHTML = "⚠️ Could not load GPU database. Make sure <code>all-gpus.json</code> is in the same folder.";
+      b.style.borderColor = "#dc2626";
+      console.error(err);
+    });
+</script>
 </body>
 </html>
